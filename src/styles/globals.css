@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+/* Prevent layout shift */
+html {
+  height: 100%;
+  height: -webkit-fill-available;
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  background-color: #fefefe;
+  color: #1a1a1a;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* Prevent layout shift */
+  line-height: 1.5;
+  font-size: 16px;
+}
+
+/* Prevent FOUC (Flash of Unstyled Content) */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Stabilize viewport */
+#__next {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Prevent horizontal scroll */
+.container {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Mobile-first responsive design */
+:root {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Mobile touch targets */
+.mobile-touch {
+  min-height: 44px;
+  min-width: 44px;
+  touch-action: manipulation;
+}
+
+/* Enhanced mobile responsiveness */
+@media (max-width: 768px) {
+  .mobile-text-responsive {
+    font-size: clamp(14px, 4vw, 18px);
+    line-height: 1.5;
+  }
+  .mobile-button {
+    min-height: 48px;
+    padding: 12px 24px;
+    font-size: 16px;
+  }
+  .mobile-spacing {
+    padding: 1rem;
+    margin: 0.5rem 0;
+  }
+  .mobile-card {
+    margin: 0.5rem;
+    border-radius: 12px;
+  }
+  .mobile-image {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+  }
+  .mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    z-index: 50;
+  }
+}
+
+/* iOS safe area support */
+.ios-safe-area {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Android Chrome fix for viewport */
+.android-chrome-fix {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+/* Mobile spacing utilities */
+.mobile-spacing {
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+}
+
+/* Prevent layout shift on images */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Stabilize animations */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
