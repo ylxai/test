@@ -1,0 +1,33 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="celebration-pattern" x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse">
+      <!-- Heart shapes -->
+      <path d="M25 35c0-7 5.5-12 12-12s12 5 12 12c0 7-12 18-12 18s-12-11-12-18z" 
+            fill="#E8B4BC" fill-opacity="0.1"/>
+      
+      <!-- Small dots -->
+      <circle cx="10" cy="10" r="1.5" fill="#E8B4BC" fill-opacity="0.05"/>
+      <circle cx="40" cy="40" r="1" fill="#E8B4BC" fill-opacity="0.03"/>
+      <circle cx="15" cy="45" r="0.8" fill="#E8B4BC" fill-opacity="0.04"/>
+      
+      <!-- Camera icons -->
+      <g transform="translate(5, 25) scale(0.8)">
+        <rect x="2" y="3" width="16" height="12" rx="2" fill="none" stroke="#E8B4BC" stroke-width="0.5" stroke-opacity="0.06"/>
+        <circle cx="10" cy="9" r="3" fill="none" stroke="#E8B4BC" stroke-width="0.4" stroke-opacity="0.05"/>
+        <rect x="14" y="5" width="2" height="1" fill="#E8B4BC" fill-opacity="0.04"/>
+      </g>
+      
+      <!-- Sparkle/star shapes -->
+      <g transform="translate(35, 8) scale(0.6)">
+        <path d="M8 2l1.5 4.5L14 8l-4.5 1.5L8 14l-1.5-4.5L2 8l4.5-1.5z" 
+              fill="#E8B4BC" fill-opacity="0.03"/>
+      </g>
+      
+      <!-- Ring/celebration circles -->
+      <circle cx="45" cy="15" r="8" fill="none" stroke="#E8B4BC" stroke-width="0.3" stroke-opacity="0.04"/>
+      <circle cx="20" cy="35" r="6" fill="none" stroke="#E8B4BC" stroke-width="0.2" stroke-opacity="0.03"/>
+    </pattern>
+  </defs>
+  
+  <rect width="100" height="100" fill="url(#celebration-pattern)"/>
+</svg> 

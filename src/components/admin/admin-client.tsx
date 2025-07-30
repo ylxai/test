@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Users, Image, Settings, Plus, Edit, Trash2, Eye, Download, Upload, Images } from 'lucide-react';
+import { Calendar, Users, Image, Settings, Plus, Edit, Trash2, Eye, Download, Upload, Images, QrCode, Copy, Share, ExternalLink } from 'lucide-react';
 import { storage } from '@/lib/storage';
 import { toast } from 'sonner';
 
@@ -23,6 +23,9 @@ interface Event {
   status: 'upcoming' | 'ongoing' | 'completed';
   guestCount: number;
   photoCount: number;
+  eventCode: string;
+  qrCodeUrl?: string;
+  guestUploadLink?: string;
 }
 
 interface Photo {
@@ -44,8 +47,20 @@ export default function AdminClient() {
   const [isEditEventOpen, setIsEditEventOpen] = useState(false);
   const [isUploadPhotoOpen, setIsUploadPhotoOpen] = useState(false);
   const [isUploadGalleryOpen, setIsUploadGalleryOpen] = useState(false);
+  const [isQrCodeOpen, setIsQrCodeOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+
+  const generateEventCode = () => {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+  };
+
+  const generateQRCode = (eventCode: string, eventId: string) => {
+    const guestUploadLink = `${window.location.origin}/event/${eventId}/upload?code=${eventCode}`;
+    // In a real implementation, you would use a QR code library like qrcode or react-qr-code
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(guestUploadLink)}`;
+    return { qrCodeUrl, guestUploadLink };
+  };
 
   useEffect(() => {
     loadData();
@@ -64,7 +79,9 @@ export default function AdminClient() {
           description: 'Pernikahan Sarah dan Budi',
           status: 'upcoming',
           guestCount: 150,
-          photoCount: 0
+          photoCount: 0,
+          eventCode: 'WED123',
+          guestUploadLink: `${window.location.origin}/event/1/upload?code=WED123`
         },
         {
           id: '2',
@@ -74,9 +91,17 @@ export default function AdminClient() {
           description: 'Ulang tahun Rina ke-25',
           status: 'completed',
           guestCount: 50,
-          photoCount: 45
+          photoCount: 45,
+          eventCode: 'BIRTH456',
+          guestUploadLink: `${window.location.origin}/event/2/upload?code=BIRTH456`
         }
       ];
+
+      // Generate QR codes for existing events
+      const eventsWithQR = mockEvents.map(event => {
+        const { qrCodeUrl } = generateQRCode(event.eventCode, event.id);
+        return { ...event, qrCodeUrl };
+      });
 
       const mockPhotos: Photo[] = [
         {
@@ -90,7 +115,7 @@ export default function AdminClient() {
         }
       ];
 
-      setEvents(mockEvents);
+      setEvents(eventsWithQR);
       setPhotos(mockPhotos);
     } catch (error) {
       toast.error('Gagal memuat data');
@@ -99,16 +124,23 @@ export default function AdminClient() {
     }
   };
 
-  const createEvent = async (eventData: Omit<Event, 'id' | 'photoCount'>) => {
+  const createEvent = async (eventData: Omit<Event, 'id' | 'photoCount' | 'eventCode' | 'qrCodeUrl' | 'guestUploadLink'>) => {
     try {
+      const eventCode = generateEventCode();
+      const eventId = Date.now().toString();
+      const { qrCodeUrl, guestUploadLink } = generateQRCode(eventCode, eventId);
+      
       const newEvent: Event = {
         ...eventData,
-        id: Date.now().toString(),
-        photoCount: 0
+        id: eventId,
+        photoCount: 0,
+        eventCode,
+        qrCodeUrl,
+        guestUploadLink
       };
       setEvents(prev => [...prev, newEvent]);
       setIsCreateEventOpen(false);
-      toast.success('Event berhasil dibuat');
+      toast.success('Event berhasil dibuat dengan kode: ' + eventCode);
     } catch (error) {
       toast.error('Gagal membuat event');
     }
@@ -184,6 +216,28 @@ export default function AdminClient() {
     }
   };
 
+  const copyEventCode = (eventCode: string) => {
+    navigator.clipboard.writeText(eventCode);
+    toast.success('Kode event berhasil disalin');
+  };
+
+  const copyGuestLink = (guestUploadLink: string) => {
+    navigator.clipboard.writeText(guestUploadLink);
+    toast.success('Link guest upload berhasil disalin');
+  };
+
+  const shareEvent = (event: Event) => {
+    if (navigator.share) {
+      navigator.share({
+        title: `Event: ${event.name}`,
+        text: `Join event ${event.name} dan upload foto dengan kode: ${event.eventCode}`,
+        url: event.guestUploadLink
+      });
+    } else {
+      copyGuestLink(event.guestUploadLink!);
+    }
+  };
+
   const getStatusColor = (status: Event['status']) => {
     switch (status) {
       case 'upcoming': return 'bg-blue-100 text-blue-800';
@@ -204,10 +258,10 @@ export default function AdminClient() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Memuat dashboard...</p>
+          <div className="animate-spin rounded-full h-8 w-8 md:h-12 md:w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600 text-sm md:text-base">Memuat dashboard...</p>
         </div>
       </div>
     );
@@ -215,21 +269,21 @@ export default function AdminClient() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+      {/* Mobile-Optimized Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-4 space-y-3 sm:space-y-0">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-gray-600">Kelola event, galeri, dan data Hafiportrait</p>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+              <p className="text-gray-600 text-sm sm:text-base">Kelola event, galeri, dan data Hafiportrait</p>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Pengaturan
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+                <Settings className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Pengaturan</span>
               </Button>
-              <Button size="sm" onClick={() => setIsCreateEventOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
+              <Button size="sm" onClick={() => setIsCreateEventOpen(true)} className="text-xs sm:text-sm">
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 Event Baru
               </Button>
             </div>
@@ -237,27 +291,30 @@ export default function AdminClient() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="events">Events</TabsTrigger>
-            <TabsTrigger value="gallery">Gallery</TabsTrigger>
-            <TabsTrigger value="uploads">Uploads</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          </TabsList>
+      {/* Mobile-Optimized Main Content */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+          {/* Mobile-Optimized Tab List */}
+          <div className="overflow-x-auto">
+            <TabsList className="grid grid-cols-5 w-full min-w-[500px] sm:min-w-0">
+              <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
+              <TabsTrigger value="events" className="text-xs sm:text-sm">Events</TabsTrigger>
+              <TabsTrigger value="gallery" className="text-xs sm:text-sm">Gallery</TabsTrigger>
+              <TabsTrigger value="uploads" className="text-xs sm:text-sm">Uploads</TabsTrigger>
+              <TabsTrigger value="analytics" className="text-xs sm:text-sm">Analytics</TabsTrigger>
+            </TabsList>
+          </div>
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Overview Tab - Mobile Optimized */}
+          <TabsContent value="overview" className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Events</CardTitle>
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-xs sm:text-sm font-medium">Total Events</CardTitle>
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{events.length}</div>
+                  <div className="text-lg sm:text-2xl font-bold">{events.length}</div>
                   <p className="text-xs text-muted-foreground">
                     {events.filter(e => e.status === 'upcoming').length} upcoming
                   </p>
@@ -266,11 +323,11 @@ export default function AdminClient() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Photos</CardTitle>
-                  <Image className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-xs sm:text-sm font-medium">Total Photos</CardTitle>
+                  <Image className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{photos.length}</div>
+                  <div className="text-lg sm:text-2xl font-bold">{photos.length}</div>
                   <p className="text-xs text-muted-foreground">
                     +{photos.reduce((acc, p) => acc + p.downloads, 0)} downloads
                   </p>
@@ -279,11 +336,11 @@ export default function AdminClient() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Guests</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-xs sm:text-sm font-medium">Total Guests</CardTitle>
+                  <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">
+                  <div className="text-lg sm:text-2xl font-bold">
                     {events.reduce((acc, e) => acc + e.guestCount, 0)}
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -294,11 +351,11 @@ export default function AdminClient() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Completed Events</CardTitle>
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-xs sm:text-sm font-medium">Completed Events</CardTitle>
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">
+                  <div className="text-lg sm:text-2xl font-bold">
                     {events.filter(e => e.status === 'completed').length}
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -317,12 +374,13 @@ export default function AdminClient() {
                 <CardContent>
                   <div className="space-y-4">
                     {events.slice(0, 3).map((event) => (
-                      <div key={event.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <h4 className="font-medium">{event.name}</h4>
-                          <p className="text-sm text-gray-600">{event.date}</p>
+                      <div key={event.id} className="flex items-center justify-between p-3 sm:p-4 border rounded-lg">
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-medium text-sm sm:text-base truncate">{event.name}</h4>
+                          <p className="text-xs sm:text-sm text-gray-600">{event.date}</p>
+                          <p className="text-xs text-gray-500">Kode: {event.eventCode}</p>
                         </div>
-                        <Badge className={getStatusColor(event.status)}>
+                        <Badge className={`${getStatusColor(event.status)} text-xs`}>
                           {getStatusText(event.status)}
                         </Badge>
                       </div>
@@ -393,40 +451,79 @@ export default function AdminClient() {
                         <span>Photos:</span>
                         <span className="font-medium">{event.photoCount}</span>
                       </div>
-                      <div className="flex space-x-2 pt-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Kode Event:</span>
+                        <div className="flex items-center space-x-1">
+                          <span className="font-medium text-blue-600">{event.eventCode}</span>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-5 w-5 p-0"
+                            onClick={() => copyEventCode(event.eventCode)}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {/* Mobile-optimized action buttons */}
+                      <div className="grid grid-cols-2 gap-2 pt-2">
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className="flex-1"
+                          className="text-xs"
                           onClick={() => {
                             setEditingEvent(event);
                             setIsEditEventOpen(true);
                           }}
                         >
-                          <Edit className="h-4 w-4 mr-1" />
+                          <Edit className="h-3 w-3 mr-1" />
                           Edit
                         </Button>
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className="flex-1"
+                          className="text-xs"
                           onClick={() => {
                             setSelectedEvent(event);
                             setIsUploadPhotoOpen(true);
                           }}
                         >
-                          <Upload className="h-4 w-4 mr-1" />
+                          <Upload className="h-3 w-3 mr-1" />
                           Upload
                         </Button>
                         <Button 
                           variant="outline" 
-                          size="sm"
-                          onClick={() => deleteEvent(event.id)}
-                          className="text-red-600 hover:text-red-700"
+                          size="sm" 
+                          className="text-xs"
+                          onClick={() => {
+                            setSelectedEvent(event);
+                            setIsQrCodeOpen(true);
+                          }}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <QrCode className="h-3 w-3 mr-1" />
+                          QR Code
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-xs"
+                          onClick={() => shareEvent(event)}
+                        >
+                          <Share className="h-3 w-3 mr-1" />
+                          Share
                         </Button>
                       </div>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => deleteEvent(event.id)}
+                        className="w-full text-red-600 hover:text-red-700 text-xs mt-2"
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Delete Event
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -572,12 +669,12 @@ export default function AdminClient() {
         </Tabs>
       </div>
 
-      {/* Create Event Dialog */}
+      {/* Create Event Dialog - Mobile Optimized */}
       <Dialog open={isCreateEventOpen} onOpenChange={setIsCreateEventOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Create New Event</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Create New Event</DialogTitle>
+            <DialogDescription className="text-sm">
               Add a new event to your portfolio
             </DialogDescription>
           </DialogHeader>
@@ -585,12 +682,12 @@ export default function AdminClient() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Event Dialog */}
+      {/* Edit Event Dialog - Mobile Optimized */}
       <Dialog open={isEditEventOpen} onOpenChange={setIsEditEventOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Event</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Edit Event</DialogTitle>
+            <DialogDescription className="text-sm">
               Update event information
             </DialogDescription>
           </DialogHeader>
@@ -607,12 +704,12 @@ export default function AdminClient() {
         </DialogContent>
       </Dialog>
 
-      {/* Upload Photo to Event Dialog */}
+      {/* Upload Photo to Event Dialog - Mobile Optimized */}
       <Dialog open={isUploadPhotoOpen} onOpenChange={setIsUploadPhotoOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Upload Photo to Event</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Upload Photo to Event</DialogTitle>
+            <DialogDescription className="text-sm">
               Upload a photo to an event gallery
             </DialogDescription>
           </DialogHeader>
@@ -628,12 +725,12 @@ export default function AdminClient() {
         </DialogContent>
       </Dialog>
 
-      {/* Upload Photo to Gallery Dialog */}
+      {/* Upload Photo to Gallery Dialog - Mobile Optimized */}
       <Dialog open={isUploadGalleryOpen} onOpenChange={setIsUploadGalleryOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Upload to Gallery</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Upload to Gallery</DialogTitle>
+            <DialogDescription className="text-sm">
               Upload a photo to the homepage gallery
             </DialogDescription>
           </DialogHeader>
@@ -643,13 +740,92 @@ export default function AdminClient() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* QR Code Dialog - Mobile Optimized */}
+      <Dialog open={isQrCodeOpen} onOpenChange={setIsQrCodeOpen}>
+        <DialogContent className="sm:max-w-[425px] w-[95vw]">
+          <DialogHeader>
+            <DialogTitle className="text-lg sm:text-xl">QR Code & Guest Access</DialogTitle>
+            <DialogDescription className="text-sm">
+              Share this QR code or link with guests to upload photos
+            </DialogDescription>
+          </DialogHeader>
+          {selectedEvent && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="bg-white p-4 rounded-lg border inline-block">
+                  <img 
+                    src={selectedEvent.qrCodeUrl} 
+                    alt="QR Code"
+                    className="w-32 h-32 sm:w-40 sm:h-40"
+                  />
+                </div>
+                <p className="text-sm text-gray-600 mt-2">Scan QR code untuk akses upload</p>
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-sm font-medium">Kode Event</Label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <Input value={selectedEvent.eventCode} readOnly className="text-center font-mono" />
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => copyEventCode(selectedEvent.eventCode)}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium">Guest Upload Link</Label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <Input value={selectedEvent.guestUploadLink} readOnly className="text-xs" />
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => copyGuestLink(selectedEvent.guestUploadLink!)}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="flex space-x-2">
+                  <Button 
+                    onClick={() => shareEvent(selectedEvent)}
+                    className="flex-1"
+                    size="sm"
+                  >
+                    <Share className="h-4 w-4 mr-2" />
+                    Share Event
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => window.open(selectedEvent.guestUploadLink, '_blank')}
+                    size="sm"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsQrCodeOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 // Form Components
 function CreateEventForm({ onSubmit, onCancel }: { 
-  onSubmit: (data: Omit<Event, 'id' | 'photoCount'>) => void;
+  onSubmit: (data: Omit<Event, 'id' | 'photoCount' | 'eventCode' | 'qrCodeUrl' | 'guestUploadLink'>) => void;
   onCancel: () => void;
 }) {
   const [formData, setFormData] = useState({
@@ -669,46 +845,51 @@ function CreateEventForm({ onSubmit, onCancel }: {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="name">Event Name</Label>
+        <Label htmlFor="name" className="text-sm">Event Name</Label>
         <Input
           id="name"
           value={formData.name}
           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
           required
+          className="mt-1"
         />
       </div>
       <div>
-        <Label htmlFor="date">Date</Label>
+        <Label htmlFor="date" className="text-sm">Date</Label>
         <Input
           id="date"
           type="date"
           value={formData.date}
           onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
           required
+          className="mt-1"
         />
       </div>
       <div>
-        <Label htmlFor="location">Location</Label>
+        <Label htmlFor="location" className="text-sm">Location</Label>
         <Input
           id="location"
           value={formData.location}
           onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
           required
+          className="mt-1"
         />
       </div>
       <div>
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description" className="text-sm">Description</Label>
         <Textarea
           id="description"
           value={formData.description}
           onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
           required
+          className="mt-1"
+          rows={3}
         />
       </div>
       <div>
-        <Label htmlFor="status">Status</Label>
+        <Label htmlFor="status" className="text-sm">Status</Label>
         <Select value={formData.status} onValueChange={(value: Event['status']) => setFormData(prev => ({ ...prev, status: value }))}>
-          <SelectTrigger>
+          <SelectTrigger className="mt-1">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -719,20 +900,21 @@ function CreateEventForm({ onSubmit, onCancel }: {
         </Select>
       </div>
       <div>
-        <Label htmlFor="guestCount">Guest Count</Label>
+        <Label htmlFor="guestCount" className="text-sm">Guest Count</Label>
         <Input
           id="guestCount"
           type="number"
           value={formData.guestCount}
           onChange={(e) => setFormData(prev => ({ ...prev, guestCount: parseInt(e.target.value) || 0 }))}
           required
+          className="mt-1"
         />
       </div>
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+      <DialogFooter className="flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+        <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
           Cancel
         </Button>
-        <Button type="submit">Create Event</Button>
+        <Button type="submit" className="w-full sm:w-auto">Create Event</Button>
       </DialogFooter>
     </form>
   );

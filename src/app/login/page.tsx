@@ -14,12 +14,6 @@ export default function LoginPage() {
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
             Masuk ke Akun Anda
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Atau{' '}
-            <a href="/register" className="font-medium text-rose-600 hover:text-rose-500">
-              daftar akun baru
-            </a>
-          </p>
         </div>
         <LoginForm />
       </div>
