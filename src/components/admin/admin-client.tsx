@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Users, Image, Settings, Plus, Edit, Trash2, Eye, Download } from 'lucide-react';
+import { Calendar, Users, Image, Settings, Plus, Edit, Trash2, Eye, Download, Upload, Images } from 'lucide-react';
 import { storage } from '@/lib/storage';
 import { toast } from 'sonner';
 
@@ -32,6 +32,7 @@ interface Photo {
   filename: string;
   uploadedAt: string;
   downloads: number;
+  album?: string;
 }
 
 export default function AdminClient() {
@@ -40,8 +41,11 @@ export default function AdminClient() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
+  const [isEditEventOpen, setIsEditEventOpen] = useState(false);
   const [isUploadPhotoOpen, setIsUploadPhotoOpen] = useState(false);
-  // const [selectedEvent, setSelectedEvent] = useState<string>('');
+  const [isUploadGalleryOpen, setIsUploadGalleryOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
 
   useEffect(() => {
     loadData();
@@ -81,7 +85,8 @@ export default function AdminClient() {
           url: '/api/photos/1',
           filename: 'IMG_001.jpg',
           uploadedAt: '2024-11-20T10:30:00Z',
-          downloads: 12
+          downloads: 12,
+          album: 'Tamu'
         }
       ];
 
@@ -109,12 +114,73 @@ export default function AdminClient() {
     }
   };
 
+  const editEvent = async (eventData: Event) => {
+    try {
+      setEvents(prev => prev.map(event => 
+        event.id === eventData.id ? eventData : event
+      ));
+      setIsEditEventOpen(false);
+      setEditingEvent(null);
+      toast.success('Event berhasil diperbarui');
+    } catch (error) {
+      toast.error('Gagal memperbarui event');
+    }
+  };
+
   const deleteEvent = async (eventId: string) => {
     try {
       setEvents(prev => prev.filter(event => event.id !== eventId));
       toast.success('Event berhasil dihapus');
     } catch (error) {
       toast.error('Gagal menghapus event');
+    }
+  };
+
+  const uploadPhotoToEvent = async (eventId: string, file: File, album: string) => {
+    try {
+      const newPhoto: Photo = {
+        id: Date.now().toString(),
+        eventId,
+        url: URL.createObjectURL(file),
+        filename: file.name,
+        uploadedAt: new Date().toISOString(),
+        downloads: 0,
+        album
+      };
+      
+      setPhotos(prev => [...prev, newPhoto]);
+      
+      // Update event photo count
+      setEvents(prev => prev.map(event => 
+        event.id === eventId 
+          ? { ...event, photoCount: event.photoCount + 1 }
+          : event
+      ));
+      
+      setIsUploadPhotoOpen(false);
+      toast.success('Foto berhasil diupload');
+    } catch (error) {
+      toast.error('Gagal upload foto');
+    }
+  };
+
+  const uploadPhotoToGallery = async (file: File, category: string) => {
+    try {
+      const newPhoto: Photo = {
+        id: Date.now().toString(),
+        eventId: 'gallery',
+        url: URL.createObjectURL(file),
+        filename: file.name,
+        uploadedAt: new Date().toISOString(),
+        downloads: 0,
+        album: category
+      };
+      
+      setPhotos(prev => [...prev, newPhoto]);
+      setIsUploadGalleryOpen(false);
+      toast.success('Foto berhasil diupload ke galeri');
+    } catch (error) {
+      toast.error('Gagal upload foto ke galeri');
     }
   };
 
@@ -162,7 +228,7 @@ export default function AdminClient() {
                 <Settings className="h-4 w-4 mr-2" />
                 Pengaturan
               </Button>
-              <Button size="sm">
+              <Button size="sm" onClick={() => setIsCreateEventOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Event Baru
               </Button>
@@ -174,10 +240,11 @@ export default function AdminClient() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="events">Events</TabsTrigger>
             <TabsTrigger value="gallery">Gallery</TabsTrigger>
+            <TabsTrigger value="uploads">Uploads</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
@@ -292,23 +359,10 @@ export default function AdminClient() {
           <TabsContent value="events" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">Events Management</h2>
-              <Dialog open={isCreateEventOpen} onOpenChange={setIsCreateEventOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Event
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>Create New Event</DialogTitle>
-                    <DialogDescription>
-                      Add a new event to your portfolio
-                    </DialogDescription>
-                  </DialogHeader>
-                  <CreateEventForm onSubmit={createEvent} onCancel={() => setIsCreateEventOpen(false)} />
-                </DialogContent>
-              </Dialog>
+              <Button onClick={() => setIsCreateEventOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Event
+              </Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -340,13 +394,29 @@ export default function AdminClient() {
                         <span className="font-medium">{event.photoCount}</span>
                       </div>
                       <div className="flex space-x-2 pt-2">
-                        <Button variant="outline" size="sm" className="flex-1">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => {
+                            setEditingEvent(event);
+                            setIsEditEventOpen(true);
+                          }}
+                        >
                           <Edit className="h-4 w-4 mr-1" />
                           Edit
                         </Button>
-                        <Button variant="outline" size="sm" className="flex-1">
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => {
+                            setSelectedEvent(event);
+                            setIsUploadPhotoOpen(true);
+                          }}
+                        >
+                          <Upload className="h-4 w-4 mr-1" />
+                          Upload
                         </Button>
                         <Button 
                           variant="outline" 
@@ -368,27 +438,14 @@ export default function AdminClient() {
           <TabsContent value="gallery" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">Photo Gallery</h2>
-              <Dialog open={isUploadPhotoOpen} onOpenChange={setIsUploadPhotoOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Upload Photo
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>Upload New Photo</DialogTitle>
-                    <DialogDescription>
-                      Upload a photo to an event gallery
-                    </DialogDescription>
-                  </DialogHeader>
-                  <UploadPhotoForm onSubmit={() => {}} onCancel={() => setIsUploadPhotoOpen(false)} />
-                </DialogContent>
-              </Dialog>
+              <Button onClick={() => setIsUploadGalleryOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Upload to Gallery
+              </Button>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {photos.map((photo) => (
+              {photos.filter(p => p.eventId === 'gallery').map((photo) => (
                 <Card key={photo.id} className="overflow-hidden">
                   <div className="aspect-square bg-gray-100 flex items-center justify-center">
                     <Image className="h-8 w-8 text-gray-400" />
@@ -396,6 +453,7 @@ export default function AdminClient() {
                   <CardContent className="p-3">
                     <p className="text-sm font-medium truncate">{photo.filename}</p>
                     <p className="text-xs text-gray-600">{photo.downloads} downloads</p>
+                    <p className="text-xs text-gray-500">{photo.album}</p>
                     <div className="flex space-x-1 mt-2">
                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
                         <Eye className="h-3 w-3" />
@@ -410,6 +468,51 @@ export default function AdminClient() {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          </TabsContent>
+
+          {/* Uploads Tab */}
+          <TabsContent value="uploads" className="space-y-6">
+            <h2 className="text-2xl font-bold">Upload Management</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Upload className="h-5 w-5 mr-2" />
+                    Upload to Event
+                  </CardTitle>
+                  <CardDescription>Upload foto ke event tertentu</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    onClick={() => setIsUploadPhotoOpen(true)}
+                    className="w-full"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Photo to Event
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Images className="h-5 w-5 mr-2" />
+                    Upload to Gallery
+                  </CardTitle>
+                  <CardDescription>Upload foto ke galeri homepage</CardDescription>
+                </CardHeader>
+                <CardContent>
+                                     <Button 
+                     onClick={() => setIsUploadGalleryOpen(true)}
+                     className="w-full"
+                   >
+                     <Images className="h-4 w-4 mr-2" />
+                     Upload to Gallery
+                   </Button>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
@@ -468,6 +571,78 @@ export default function AdminClient() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Create Event Dialog */}
+      <Dialog open={isCreateEventOpen} onOpenChange={setIsCreateEventOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create New Event</DialogTitle>
+            <DialogDescription>
+              Add a new event to your portfolio
+            </DialogDescription>
+          </DialogHeader>
+          <CreateEventForm onSubmit={createEvent} onCancel={() => setIsCreateEventOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Event Dialog */}
+      <Dialog open={isEditEventOpen} onOpenChange={setIsEditEventOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Event</DialogTitle>
+            <DialogDescription>
+              Update event information
+            </DialogDescription>
+          </DialogHeader>
+          {editingEvent && (
+            <EditEventForm 
+              event={editingEvent} 
+              onSubmit={editEvent} 
+              onCancel={() => {
+                setIsEditEventOpen(false);
+                setEditingEvent(null);
+              }} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Photo to Event Dialog */}
+      <Dialog open={isUploadPhotoOpen} onOpenChange={setIsUploadPhotoOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Upload Photo to Event</DialogTitle>
+            <DialogDescription>
+              Upload a photo to an event gallery
+            </DialogDescription>
+          </DialogHeader>
+          <UploadPhotoToEventForm 
+            events={events}
+            selectedEvent={selectedEvent}
+            onSubmit={uploadPhotoToEvent}
+            onCancel={() => {
+              setIsUploadPhotoOpen(false);
+              setSelectedEvent(null);
+            }} 
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Photo to Gallery Dialog */}
+      <Dialog open={isUploadGalleryOpen} onOpenChange={setIsUploadGalleryOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Upload to Gallery</DialogTitle>
+            <DialogDescription>
+              Upload a photo to the homepage gallery
+            </DialogDescription>
+          </DialogHeader>
+          <UploadPhotoToGalleryForm 
+            onSubmit={uploadPhotoToGallery}
+            onCancel={() => setIsUploadGalleryOpen(false)} 
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -563,30 +738,139 @@ function CreateEventForm({ onSubmit, onCancel }: {
   );
 }
 
-function UploadPhotoForm({ onSubmit, onCancel }: { 
-  onSubmit: (data: { eventId: string; file: File | null }) => void;
+function EditEventForm({ event, onSubmit, onCancel }: { 
+  event: Event;
+  onSubmit: (data: Event) => void;
   onCancel: () => void;
 }) {
-  const [selectedEvent, setSelectedEvent] = useState('');
+  const [formData, setFormData] = useState(event);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="name">Event Name</Label>
+        <Input
+          id="name"
+          value={formData.name}
+          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="date">Date</Label>
+        <Input
+          id="date"
+          type="date"
+          value={formData.date}
+          onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="location">Location</Label>
+        <Input
+          id="location"
+          value={formData.location}
+          onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="status">Status</Label>
+        <Select value={formData.status} onValueChange={(value: Event['status']) => setFormData(prev => ({ ...prev, status: value }))}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="upcoming">Upcoming</SelectItem>
+            <SelectItem value="ongoing">Ongoing</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label htmlFor="guestCount">Guest Count</Label>
+        <Input
+          id="guestCount"
+          type="number"
+          value={formData.guestCount}
+          onChange={(e) => setFormData(prev => ({ ...prev, guestCount: parseInt(e.target.value) || 0 }))}
+          required
+        />
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit">Update Event</Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
+function UploadPhotoToEventForm({ 
+  events, 
+  selectedEvent, 
+  onSubmit, 
+  onCancel 
+}: { 
+  events: Event[];
+  selectedEvent: Event | null;
+  onSubmit: (eventId: string, file: File, album: string) => void;
+  onCancel: () => void;
+}) {
+  const [selectedEventId, setSelectedEventId] = useState(selectedEvent?.id || '');
+  const [selectedAlbum, setSelectedAlbum] = useState('Tamu');
   const [file, setFile] = useState<File | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle file upload logic here
-    onSubmit({ eventId: selectedEvent, file });
+    if (file && selectedEventId) {
+      onSubmit(selectedEventId, file, selectedAlbum);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <Label htmlFor="event">Select Event</Label>
-        <Select value={selectedEvent} onValueChange={setSelectedEvent}>
+        <Select value={selectedEventId} onValueChange={setSelectedEventId}>
           <SelectTrigger>
             <SelectValue placeholder="Choose an event" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="1">Wedding Sarah & Budi</SelectItem>
-            <SelectItem value="2">Birthday Party Rina</SelectItem>
+            {events.map(event => (
+              <SelectItem key={event.id} value={event.id}>
+                {event.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label htmlFor="album">Album</Label>
+        <Select value={selectedAlbum} onValueChange={setSelectedAlbum}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Private">Private</SelectItem>
+            <SelectItem value="Tamu">Tamu</SelectItem>
+            <SelectItem value="Bridesmaid">Bridesmaid</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -604,7 +888,61 @@ function UploadPhotoForm({ onSubmit, onCancel }: {
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit">Upload Photo</Button>
+        <Button type="submit" disabled={!file || !selectedEventId}>
+          Upload Photo
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
+function UploadPhotoToGalleryForm({ onSubmit, onCancel }: { 
+  onSubmit: (file: File, category: string) => void;
+  onCancel: () => void;
+}) {
+  const [selectedCategory, setSelectedCategory] = useState('Wedding');
+  const [file, setFile] = useState<File | null>(null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (file) {
+      onSubmit(file, selectedCategory);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="category">Category</Label>
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Wedding">Wedding</SelectItem>
+            <SelectItem value="Birthday">Birthday</SelectItem>
+            <SelectItem value="Corporate">Corporate</SelectItem>
+            <SelectItem value="Family">Family</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label htmlFor="file">Upload Photo</Label>
+        <Input
+          id="file"
+          type="file"
+          accept="image/*"
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          required
+        />
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={!file}>
+          Upload to Gallery
+        </Button>
       </DialogFooter>
     </form>
   );

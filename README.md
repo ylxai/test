@@ -1,36 +1,207 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hafiportrait - Next.js Migration
 
-## Getting Started
+Aplikasi Hafiportrait yang telah dimigrasikan dari Vite/Express ke Next.js menggunakan App Router.
 
-First, run the development server:
+## 🚀 Fitur Utama
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+### Admin Dashboard
+- **Overview**: Dashboard dengan statistik event, foto, dan tamu
+- **Event Management**: 
+  - ✅ Create, Edit, Delete Event
+  - ✅ Upload foto ke event dengan album (Private, Tamu, Bridesmaid)
+  - ✅ Manajemen status event (upcoming, ongoing, completed)
+- **Gallery Management**: Upload foto ke galeri homepage
+- **Upload Management**: Interface terpisah untuk upload ke event dan galeri
+- **Analytics**: Statistik performa event dan foto
+
+### Event Pages
+- **Tab Galeri**: 
+  - ✅ Album Private, Tamu, Bridesmaid
+  - ✅ Search dan filter foto
+  - ✅ Sort by newest, oldest, most liked, most downloaded
+- **Guestbook**: 
+  - ✅ Form untuk menulis pesan
+  - ✅ Tampilan pesan dari tamu
+  - ✅ Timestamp dan nama pengirim
+- **Photo Lightbox**: 
+  - ✅ Like, Download, Share, Slideshow di dalam lightbox
+  - ✅ Zoom in/out, rotate, reset view
+  - ✅ Keyboard navigation (arrow keys, escape, spacebar)
+  - ✅ Thumbnail strip untuk navigasi cepat
+  - ✅ Progress bar untuk slideshow
+
+### Authentication
+- ✅ Login page (Register dihapus sesuai permintaan)
+- ✅ Form validation dengan toast notifications
+
+## 🛠 Teknologi yang Digunakan
+
+- **Framework**: Next.js 15.4.5 dengan App Router
+- **Styling**: Tailwind CSS
+- **UI Components**: shadcn/ui
+- **Icons**: Lucide React
+- **Date Handling**: date-fns
+- **Notifications**: Sonner
+- **Type Safety**: TypeScript
+- **State Management**: React Hooks
+- **Mock Data**: Custom storage service
+
+## 📁 Struktur Project
+
+```
+src/
+├── app/                    # Next.js App Router pages
+│   ├── admin/             # Admin dashboard
+│   ├── event/[id]/        # Dynamic event pages
+│   ├── login/             # Login page
+│   ├── about/             # About page
+│   ├── contact/           # Contact page
+│   └── layout.tsx         # Root layout
+├── components/            # React components
+│   ├── admin/            # Admin dashboard components
+│   ├── events/           # Event-related components
+│   ├── auth/             # Authentication components
+│   ├── ui/               # shadcn/ui components
+│   └── ...               # Other components
+├── lib/                  # Utilities and services
+│   └── storage.ts        # Mock storage service
+└── styles/               # Global styles
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🎯 Halaman yang Dibuat
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 1. Admin Dashboard (`/admin`)
+- **Overview Tab**: Statistik dashboard
+- **Events Tab**: Manajemen event dengan CRUD operations
+- **Gallery Tab**: Manajemen foto galeri homepage
+- **Uploads Tab**: Interface upload terpisah
+- **Analytics Tab**: Statistik performa
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 2. Event Detail (`/event/[id]`)
+- **Gallery Tab**: 
+  - Album tabs (Private, Tamu, Bridesmaid)
+  - Search dan filter
+  - Photo grid dengan hover effects
+- **Guestbook Tab**: 
+  - Form input pesan
+  - Daftar pesan tamu
 
-## Learn More
+### 3. Login Page (`/login`)
+- Form login dengan email/password
+- Remember me dan forgot password
+- Social login placeholders
 
-To learn more about Next.js, take a look at the following resources:
+### 4. About Page (`/about`)
+- Company story dan values
+- Team information
+- Statistics
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 5. Contact Page (`/contact`)
+- Contact form
+- Contact information
+- FAQ section
+- Map placeholder
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🔧 Fitur yang Diimplementasikan
 
-## Deploy on Vercel
+### Admin Dashboard Enhancements
+- ✅ **Add Event**: Form lengkap untuk membuat event baru
+- ✅ **Edit Event**: Form untuk mengedit event yang ada
+- ✅ **Delete Event**: Konfirmasi dan penghapusan event
+- ✅ **Upload to Event**: Upload foto dengan pilihan album
+- ✅ **Upload to Gallery**: Upload foto ke galeri homepage
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Event Page Enhancements
+- ✅ **Album Tabs**: Private, Tamu, Bridesmaid dengan counter
+- ✅ **Guestbook**: Form dan tampilan pesan tamu
+- ✅ **Enhanced Lightbox**: 
+  - Like, download, share, slideshow
+  - Zoom, rotate, reset view
+  - Keyboard navigation
+  - Thumbnail strip
+  - Progress bar
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### UI/UX Improvements
+- ✅ **Responsive Design**: Mobile-first approach
+- ✅ **Toast Notifications**: Feedback untuk user actions
+- ✅ **Loading States**: Skeleton dan spinner
+- ✅ **Error Handling**: Graceful error handling
+- ✅ **Accessibility**: Keyboard navigation dan screen reader support
+
+## 🚀 Cara Menjalankan
+
+### Development
+```bash
+npm install
+npm run dev
+```
+
+### Production Build
+```bash
+npm run build
+npm start
+```
+
+## 📱 Responsive Design
+
+Aplikasi dioptimalkan untuk:
+- **Mobile**: 320px - 768px
+- **Tablet**: 768px - 1024px
+- **Desktop**: 1024px+
+
+## 🔒 Security Features
+
+- Type-safe API calls
+- Input validation
+- XSS protection
+- CSRF protection (dalam implementasi nyata)
+
+## 📊 Performance
+
+- **Code Splitting**: Otomatis dengan Next.js
+- **Image Optimization**: Next.js Image component
+- **Lazy Loading**: Komponen dan gambar
+- **Bundle Analysis**: Optimized build size
+
+## 🎨 Design System
+
+- **Colors**: Wedding theme dengan rose-gold accent
+- **Typography**: Playfair Display untuk headings
+- **Components**: shadcn/ui untuk konsistensi
+- **Icons**: Lucide React untuk iconography
+
+## 🔄 Migration Notes
+
+### Dari Vite/Express ke Next.js
+- ✅ Server-side rendering untuk SEO
+- ✅ App Router untuk routing modern
+- ✅ Built-in API routes
+- ✅ Image optimization
+- ✅ Automatic code splitting
+
+### Perubahan Utama
+- ✅ Hapus fungsi register
+- ✅ Enhanced admin dashboard
+- ✅ Tab galeri dengan album
+- ✅ Guestbook functionality
+- ✅ Advanced photo lightbox
+- ✅ Improved UX/UI
+
+## 🚧 TODO (Future Enhancements)
+
+- [ ] Real API integration (mengganti mock storage)
+- [ ] Image upload dengan cloud storage
+- [ ] Real-time notifications
+- [ ] Advanced analytics
+- [ ] Email notifications
+- [ ] Payment integration
+- [ ] Multi-language support
+- [ ] PWA features
+
+## 📄 License
+
+MIT License - lihat file LICENSE untuk detail.
+
+---
+
+**Hafiportrait** - Capturing moments, creating memories.
