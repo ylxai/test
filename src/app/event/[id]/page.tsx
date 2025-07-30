@@ -1,11 +1,11 @@
-```tsx src/app/event/[id]/page.tsx
 import { Metadata } from "next";
 import EventClient from "@/components/events/event-client";
 import { storage } from "@/lib/storage";
 
 // Membuat metadata dinamis berdasarkan event
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const event = await storage.getEvent(params.id);
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const event = await storage.getEvent(id);
   
   if (!event) {
     return {
@@ -20,8 +20,9 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 }
 
 // Server component yang mengambil data event
-export default async function EventPage({ params }: { params: { id: string } }) {
-  const event = await storage.getEvent(params.id);
+export default async function EventPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const event = await storage.getEvent(id);
   
   if (!event) {
     return (
@@ -36,4 +37,3 @@ export default async function EventPage({ params }: { params: { id: string } }) 
   
   return <EventClient event={event} />;
 }
-```

@@ -84,7 +84,7 @@ export default function FeaturesGrid() {
             Everything you need for the perfect celebration album
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            From instant event creation to beautiful slideshows, we've thought of everything.
+            From instant event creation to beautiful slideshows, we&apos;ve thought of everything.
           </p>
         </div>
 

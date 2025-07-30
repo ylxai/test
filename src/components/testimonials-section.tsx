@@ -54,7 +54,7 @@ export default function TestimonialsSection() {
                   </div>
                 </div>
                 <p className="text-gray-700 mb-6 italic">
-                  "{testimonial.content}"
+                  &ldquo;{testimonial.content}&rdquo;
                 </p>
                 <div className="flex items-center">
                   <img

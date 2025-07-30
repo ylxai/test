@@ -1,428 +1,345 @@
-```typescript src/lib/storage.ts
-import { createClient } from '@supabase/supabase-js';
-import { randomUUID } from 'crypto';
-import type { InsertEvent, Event, InsertPhoto, Photo, InsertMessage, Message } from '@/types/schema';
+// Simulasi storage untuk development
+// Dalam implementasi nyata, ini akan terhubung ke database atau API
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-interface AdminStats {
-  totalEvents: number;
-  totalPhotos: number;
-  totalMessages: number;
-  activeEvents: number;
-  storageUsed: string;
+export interface Event {
+  id: string;
+  name: string;
+  date: string;
+  location: string;
+  description: string;
+  status: 'upcoming' | 'ongoing' | 'completed';
+  guestCount: number;
+  photoCount: number;
+  coverImage?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-interface StorageInterface {
-  createEvent(data: InsertEvent): Promise<Event>;
-  getEvent(id: string): Promise<Event | null>;
-  getAllEvents(): Promise<Event[]>;
-  deleteEvent(id: string): Promise<void>;
-  
-  addPhoto(data: InsertPhoto): Promise<Photo>;
-  getEventPhotos(eventId: string): Promise<Photo[]>;
-  getPhotosByAlbum(eventId: string, albumName: string): Promise<Photo[]>;
-  updatePhotoLikes(photoId: string, likes: number): Promise<Photo | null>;
-  deletePhoto(photoId: string): Promise<void>;
-  getRecentPhotos(limit: number): Promise<Photo[]>;
-  
-  addMessage(data: InsertMessage): Promise<Message>;
-  getEventMessages(eventId: string): Promise<Message[]>;
-  updateMessageHearts(messageId: string, hearts: number): Promise<Message | null>;
-  
-  verifyEventAccessCode(eventId: string, accessCode: string): Promise<boolean>;
-  
-  getAdminStats(): Promise<AdminStats>;
-  
-  addGalleryPhoto(category: string, photoData: any): Promise<any>;
-  getGalleryPhotos(category?: string): Promise<any[]>;
-  deleteGalleryPhoto(photoId: string): Promise<any>;
-  
-  getPricing(): Promise<any>;
-  updatePricing(data: any): Promise<any>;
-  uploadPricingPDF(data: any): Promise<any>;
+export interface Photo {
+  id: string;
+  eventId: string;
+  url: string;
+  filename: string;
+  uploadedAt: string;
+  downloads: number;
+  thumbnail?: string;
+  metadata?: {
+    width: number;
+    height: number;
+    size: number;
+    format: string;
+  };
 }
 
-class SupabaseStorage implements StorageInterface {
-  private async uploadToSupabase(base64Data: string, filename: string, bucket: string = 'photos'): Promise<string> {
-    try {
-      // Extract base64 data
-      const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      if (!matches) {
-        throw new Error('Invalid base64 data');
-      }
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'user';
+  createdAt: string;
+}
 
-      const contentType = matches[1];
-      const base64 = matches[2];
-      const buffer = Buffer.from(base64, 'base64');
+// Mock data
+const mockEvents: Event[] = [
+  {
+    id: '1',
+    name: 'Wedding Sarah & Budi',
+    date: '2024-12-15',
+    location: 'Hotel Grand Palace, Jakarta',
+    description: 'Pernikahan Sarah dan Budi yang diadakan di Hotel Grand Palace dengan tema klasik elegan.',
+    status: 'upcoming',
+    guestCount: 150,
+    photoCount: 0,
+    createdAt: '2024-01-15T10:00:00Z',
+    updatedAt: '2024-01-15T10:00:00Z'
+  },
+  {
+    id: '2',
+    name: 'Birthday Party Rina',
+    date: '2024-11-20',
+    location: 'Restaurant Seafood Garden',
+    description: 'Ulang tahun Rina ke-25 dengan tema garden party yang meriah.',
+    status: 'completed',
+    guestCount: 50,
+    photoCount: 45,
+    createdAt: '2024-01-10T14:30:00Z',
+    updatedAt: '2024-01-20T16:45:00Z'
+  },
+  {
+    id: '3',
+    name: 'Corporate Event PT Maju Bersama',
+    date: '2024-10-25',
+    location: 'Convention Center Jakarta',
+    description: 'Annual gathering perusahaan dengan tema modern dan profesional.',
+    status: 'completed',
+    guestCount: 200,
+    photoCount: 120,
+    createdAt: '2024-01-05T09:15:00Z',
+    updatedAt: '2024-01-25T11:20:00Z'
+  }
+];
 
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .upload(filename, buffer, {
-          contentType,
-          upsert: true
-        });
-
-      if (error) {
-        console.error('Supabase upload error:', error);
-        throw error;
-      }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(filename);
-
-      return urlData.publicUrl;
-    } catch (error) {
-      console.error('Upload to Supabase failed:', error);
-      // Return the original base64 data as fallback
-      return base64Data;
+const mockPhotos: Photo[] = [
+  {
+    id: '1',
+    eventId: '2',
+    url: '/api/photos/1',
+    filename: 'IMG_001.jpg',
+    uploadedAt: '2024-11-20T10:30:00Z',
+    downloads: 12,
+    thumbnail: '/api/photos/1/thumbnail',
+    metadata: {
+      width: 1920,
+      height: 1080,
+      size: 2048576,
+      format: 'JPEG'
+    }
+  },
+  {
+    id: '2',
+    eventId: '2',
+    url: '/api/photos/2',
+    filename: 'IMG_002.jpg',
+    uploadedAt: '2024-11-20T10:35:00Z',
+    downloads: 8,
+    thumbnail: '/api/photos/2/thumbnail',
+    metadata: {
+      width: 1920,
+      height: 1080,
+      size: 1876543,
+      format: 'JPEG'
+    }
+  },
+  {
+    id: '3',
+    eventId: '2',
+    url: '/api/photos/3',
+    filename: 'IMG_003.jpg',
+    uploadedAt: '2024-11-20T10:40:00Z',
+    downloads: 15,
+    thumbnail: '/api/photos/3/thumbnail',
+    metadata: {
+      width: 1920,
+      height: 1080,
+      size: 2154321,
+      format: 'JPEG'
     }
   }
+];
 
-  async createEvent(data: InsertEvent): Promise<Event> {
-    const eventId = randomUUID();
-    const shareableLink = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/event/${eventId}`;
-    const qrCode = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareableLink)}`;
+const mockUsers: User[] = [
+  {
+    id: '1',
+    name: 'Hafi Rahman',
+    email: 'hafi@hafiportrait.com',
+    role: 'admin',
+    createdAt: '2024-01-01T00:00:00Z'
+  }
+];
 
-    const eventData = {
-      id: eventId,
-      ...data,
-      shareableLink,
-      qrCode,
-      createdAt: new Date().toISOString(),
-    };
+class StorageService {
+  private events: Event[] = [...mockEvents];
+  private photos: Photo[] = [...mockPhotos];
+  private users: User[] = [...mockUsers];
 
-    const { data: event, error } = await supabase
-      .from('events')
-      .insert(eventData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Create event error:', error);
-      throw error;
-    }
-
-    return event;
+  // Event methods
+  async getEvents(): Promise<Event[]> {
+    // Simulasi network delay
+    await new Promise(resolve => setTimeout(resolve, 100));
+    return this.events.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async getEvent(id: string): Promise<Event | null> {
-    const { data, error } = await supabase
-      .from('events')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') return null; // Not found
-      throw error;
-    }
-
-    return data;
+    await new Promise(resolve => setTimeout(resolve, 50));
+    return this.events.find(event => event.id === id) || null;
   }
 
-  async getAllEvents(): Promise<Event[]> {
-    const { data, error } = await supabase
-      .from('events')
-      .select('*')
-      .order('createdAt', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  }
-
-  async deleteEvent(id: string): Promise<void> {
-    // Delete related photos first
-    await supabase.from('photos').delete().eq('eventId', id);
-    // Delete related messages
-    await supabase.from('messages').delete().eq('eventId', id);
-    // Delete event
-    const { error } = await supabase.from('events').delete().eq('id', id);
-    if (error) throw error;
-  }
-
-  async addPhoto(data: InsertPhoto): Promise<Photo> {
-    const photoId = randomUUID();
+  async createEvent(eventData: Omit<Event, 'id' | 'createdAt' | 'updatedAt'>): Promise<Event> {
+    await new Promise(resolve => setTimeout(resolve, 200));
     
-    // Upload to Supabase if it's base64 data
-    let finalUrl = data.url;
-    if (data.url.startsWith('data:')) {
-      finalUrl = await this.uploadToSupabase(data.url, data.filename);
-    }
-
-    const photoData = {
-      id: photoId,
-      ...data,
-      url: finalUrl,
-      uploadedAt: new Date().toISOString(),
+    const newEvent: Event = {
+      ...eventData,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
-
-    const { data: photo, error } = await supabase
-      .from('photos')
-      .insert(photoData)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return photo;
+    
+    this.events.push(newEvent);
+    return newEvent;
   }
 
-  async getEventPhotos(eventId: string): Promise<Photo[]> {
-    const { data, error } = await supabase
-      .from('photos')
-      .select('*')
-      .eq('eventId', eventId)
-      .order('uploadedAt', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
+  async updateEvent(id: string, eventData: Partial<Event>): Promise<Event | null> {
+    await new Promise(resolve => setTimeout(resolve, 150));
+    
+    const index = this.events.findIndex(event => event.id === id);
+    if (index === -1) return null;
+    
+    this.events[index] = {
+      ...this.events[index],
+      ...eventData,
+      updatedAt: new Date().toISOString()
+    };
+    
+    return this.events[index];
   }
 
-  async getPhotosByAlbum(eventId: string, albumName: string): Promise<Photo[]> {
-    const { data, error } = await supabase
-      .from('photos')
-      .select('*')
-      .eq('eventId', eventId)
-      .eq('albumName', albumName)
-      .order('uploadedAt', { ascending: false });
+  async deleteEvent(id: string): Promise<boolean> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    const index = this.events.findIndex(event => event.id === id);
+    if (index === -1) return false;
+    
+    this.events.splice(index, 1);
+    
+    // Also delete related photos
+    this.photos = this.photos.filter(photo => photo.eventId !== id);
+    
+    return true;
+  }
 
-    if (error) throw error;
-    return data || [];
+  // Photo methods
+  async getPhotos(eventId?: string): Promise<Photo[]> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    if (eventId) {
+      return this.photos.filter(photo => photo.eventId === eventId);
+    }
+    
+    return this.photos.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
+  }
+
+  async getPhoto(id: string): Promise<Photo | null> {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    return this.photos.find(photo => photo.id === id) || null;
+  }
+
+  async uploadPhoto(photoData: Omit<Photo, 'id' | 'uploadedAt'>): Promise<Photo> {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    const newPhoto: Photo = {
+      ...photoData,
+      id: Date.now().toString(),
+      uploadedAt: new Date().toISOString()
+    };
+    
+    this.photos.push(newPhoto);
+    
+    // Update event photo count
+    const event = this.events.find(e => e.id === photoData.eventId);
+    if (event) {
+      event.photoCount += 1;
+      event.updatedAt = new Date().toISOString();
+    }
+    
+    return newPhoto;
+  }
+
+  async deletePhoto(id: string): Promise<boolean> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    const index = this.photos.findIndex(photo => photo.id === id);
+    if (index === -1) return false;
+    
+    const photo = this.photos[index];
+    this.photos.splice(index, 1);
+    
+    // Update event photo count
+    const event = this.events.find(e => e.id === photo.eventId);
+    if (event) {
+      event.photoCount = Math.max(0, event.photoCount - 1);
+      event.updatedAt = new Date().toISOString();
+    }
+    
+    return true;
+  }
+
+  async incrementDownloadCount(photoId: string): Promise<void> {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    const photo = this.photos.find(p => p.id === photoId);
+    if (photo) {
+      photo.downloads += 1;
+    }
   }
 
   async updatePhotoLikes(photoId: string, likes: number): Promise<Photo | null> {
-    const { data, error } = await supabase
-      .from('photos')
-      .update({ likes })
-      .eq('id', photoId)
-      .select()
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') return null;
-      throw error;
-    }
-
-    return data;
-  }
-
-  async deletePhoto(photoId: string): Promise<void> {
-    const { error } = await supabase
-      .from('photos')
-      .delete()
-      .eq('id', photoId);
-
-    if (error) throw error;
-  }
-
-  async getRecentPhotos(limit: number): Promise<Photo[]> {
-    const { data, error } = await supabase
-      .from('photos')
-      .select('*')
-      .order('uploadedAt', { ascending: false })
-      .limit(limit);
-
-    if (error) throw error;
-    return data || [];
-  }
-
-  async addMessage(data: InsertMessage): Promise<Message> {
-    const messageId = randomUUID();
-    const messageData = {
-      id: messageId,
-      ...data,
-      hearts: 0,
-      createdAt: new Date().toISOString(),
-    };
-
-    const { data: message, error } = await supabase
-      .from('messages')
-      .insert(messageData)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return message;
-  }
-
-  async getEventMessages(eventId: string): Promise<Message[]> {
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('eventId', eventId)
-      .order('createdAt', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  }
-
-  async updateMessageHearts(messageId: string, hearts: number): Promise<Message | null> {
-    const { data, error } = await supabase
-      .from('messages')
-      .update({ hearts })
-      .eq('id', messageId)
-      .select()
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') return null;
-      throw error;
-    }
-
-    return data;
-  }
-
-  async verifyEventAccessCode(eventId: string, accessCode: string): Promise<boolean> {
-    const { data, error } = await supabase
-      .from('events')
-      .select('accessCode')
-      .eq('id', eventId)
-      .single();
-
-    if (error) return false;
-    return data.accessCode === accessCode;
-  }
-
-  async getAdminStats(): Promise<AdminStats> {
-    const [eventsResult, photosResult, messagesResult] = await Promise.all([
-      supabase.from('events').select('id', { count: 'exact' }),
-      supabase.from('photos').select('id', { count: 'exact' }),
-      supabase.from('messages').select('id', { count: 'exact' }),
-    ]);
-
-    return {
-      totalEvents: eventsResult.count || 0,
-      totalPhotos: photosResult.count || 0,
-      totalMessages: messagesResult.count || 0,
-      activeEvents: eventsResult.count || 0,
-      storageUsed: "0 GB", // Placeholder
-    };
-  }
-
-  async addGalleryPhoto(category: string, photoData: any): Promise<any> {
-    // Upload to Supabase if it's base64 data
-    let finalUrl = photoData.url;
-    if (photoData.url.startsWith('data:')) {
-      finalUrl = await this.uploadToSupabase(photoData.url, photoData.filename, 'gallery');
-    }
-
-    const galleryData = {
-      id: randomUUID(),
-      category,
-      filename: photoData.filename,
-      originalName: photoData.originalName,
-      url: finalUrl,
-      createdAt: new Date().toISOString(),
-    };
-
-    const { data, error } = await supabase
-      .from('gallery')
-      .insert(galleryData)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  }
-
-  async getGalleryPhotos(category?: string): Promise<any[]> {
-    let query = supabase.from('gallery').select('*');
+    await new Promise(resolve => setTimeout(resolve, 50));
     
-    if (category) {
-      query = query.eq('category', category);
+    const photo = this.photos.find(p => p.id === photoId);
+    if (photo) {
+      // Add likes property if it doesn't exist
+      (photo as Photo & { likes: number }).likes = likes;
+      return photo;
     }
-
-    const { data, error } = await query.order('createdAt', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
+    return null;
   }
 
-  async deleteGalleryPhoto(photoId: string): Promise<any> {
-    const { error } = await supabase
-      .from('gallery')
-      .delete()
-      .eq('id', photoId);
-
-    if (error) throw error;
+  async deleteGalleryPhoto(photoId: string): Promise<{ success: boolean }> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    const index = this.photos.findIndex(photo => photo.id === photoId);
+    if (index === -1) return { success: false };
+    
+    this.photos.splice(index, 1);
     return { success: true };
   }
 
-  async getPricing(): Promise<any> {
-    const { data, error } = await supabase
-      .from('pricing')
-      .select('*')
-      .single();
-
-    if (error) {
-      // Return default pricing if not found
-      return {
-        akad: {
-          name: "Paket Akad Nikah",
-          price: "1300000",
-          badge: "PROMO",
-          icon: "👰‍♀️💒",
-          features: "1 fotografer\n1 hari kerja\n40 cetak foto 5R (pilihan)\nAlbum magnetik (tempel)\nFile foto tanpa batas\nSoftcopy di flashdisk"
-        },
-        premium: {
-          name: "Paket Premium",
-          price: "8000000",
-          badge: "RECOMMENDED",
-          icon: "💍✨",
-          features: "2 fotografer\n8 jam liputan\n200 foto edit profesional\nAlbum premium 40 halaman\nUSB flashdisk custom\nOnline gallery selamanya\nVideo highlight 3-5 menit"
-        },
-        platinum: {
-          name: "Paket Platinum",
-          price: "12000000",
-          badge: "LUXURY",
-          icon: "👑💎",
-          features: "3 fotografer + videographer\nFull day coverage\nUnlimited foto edit\nAlbum premium leather\nCinematic wedding video\nDrone footage\nPre-wedding session\nSame day edit + highlight"
-        }
-      };
-    }
-
-    return data;
+  // User methods
+  async getUsers(): Promise<User[]> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    return this.users;
   }
 
-  async updatePricing(data: any): Promise<any> {
-    const { data: result, error } = await supabase
-      .from('pricing')
-      .upsert(data)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return result;
+  async getUser(id: string): Promise<User | null> {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    return this.users.find(user => user.id === id) || null;
   }
 
-  async uploadPricingPDF(data: any): Promise<any> {
-    const { filename, buffer } = data;
+  async getUserByEmail(email: string): Promise<User | null> {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    return this.users.find(user => user.email === email) || null;
+  }
 
-    const { data: uploadData, error } = await supabase.storage
-      .from('documents')
-      .upload(filename, buffer, {
-        contentType: 'application/pdf',
-        upsert: true
-      });
-
-    if (error) throw error;
-
-    const { data: urlData } = supabase.storage
-      .from('documents')
-      .getPublicUrl(filename);
-
+  // Analytics methods
+  async getAnalytics() {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    const totalEvents = this.events.length;
+    const totalPhotos = this.photos.length;
+    const totalDownloads = this.photos.reduce((acc, photo) => acc + photo.downloads, 0);
+    const completedEvents = this.events.filter(event => event.status === 'completed').length;
+    const upcomingEvents = this.events.filter(event => event.status === 'upcoming').length;
+    
     return {
-      filename,
-      url: urlData.publicUrl,
-      success: true
+      totalEvents,
+      totalPhotos,
+      totalDownloads,
+      completedEvents,
+      upcomingEvents,
+      averageDownloadsPerPhoto: totalPhotos > 0 ? Math.round(totalDownloads / totalPhotos) : 0
     };
+  }
+
+  // Search methods
+  async searchEvents(query: string): Promise<Event[]> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    const lowercaseQuery = query.toLowerCase();
+    return this.events.filter(event => 
+      event.name.toLowerCase().includes(lowercaseQuery) ||
+      event.location.toLowerCase().includes(lowercaseQuery) ||
+      event.description.toLowerCase().includes(lowercaseQuery)
+    );
+  }
+
+  async searchPhotos(query: string): Promise<Photo[]> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    const lowercaseQuery = query.toLowerCase();
+    return this.photos.filter(photo => 
+      photo.filename.toLowerCase().includes(lowercaseQuery)
+    );
   }
 }
 
-export const storage = new SupabaseStorage();
-```
+export const storage = new StorageService();
